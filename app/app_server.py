@@ -34,6 +34,7 @@ DATA_PROVIDER_MAP = {
 
 
 def get_config():
+    # TODO: Make this path relative to the current directory, instead of the working directory
     with open('config.json') as f_config:
         return json.load(f_config)
 
