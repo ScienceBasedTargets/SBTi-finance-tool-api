@@ -26,7 +26,6 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 api = Api(app)
 
-
 DATA_PROVIDER_MAP = {
     "excel": ExcelProvider,
     "csv": CSVProvider,
@@ -290,13 +289,11 @@ class ParsePortfolioEndpoint(Resource):
     """
 
     def post(self):
-        skiprows = request.form.get("skiprows")
-        if skiprows is None:
-            skiprows = 0
-
+        skiprows = request.form.get("skiprows", 0)
         df = pd.read_excel(request.files.get('file'), skiprows=int(skiprows))
 
-        return {'portfolio': df.replace({np.nan: None}).to_dict(orient="records")}
+        return {'portfolio': df.replace(r'^\s*$', np.nan, regex=True).dropna(how='all').replace({np.nan: None}).to_dict(
+            orient="records")}
 
 
 class ImportDataProviderEndpoint(Resource):
