@@ -127,6 +127,12 @@ class TemperatureScoreEndpoint(BaseEndpoint):
             scenario = Scenario.from_dict(scenario)
             temperature_score.set_scenario(scenario)
 
+        if len(portfolio_data) == 0:
+            return {
+                       "success": False,
+                       "message": "None of the companies in your portfolio could be found by the data provider"
+                   }, 400
+
         # Target_Valuation_Protocol
         target_valuation_protocol = TargetValuationProtocol(portfolio_data, company_data)
 
