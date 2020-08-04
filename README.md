@@ -5,16 +5,27 @@ targets for official validation by the SBTi.
 
 Under the hood, this API uses the SBTi Python module. The complete structure that consists of a Python module, API and a UI looks as follows:
 
-    ┌──────────────────────────┐
-    │  UI                      │
-    │   ┌─────────────────────┐│
-    │   │ API                 ││
-    │   │  ┌─────────────────┐││
-    │   │  │ Python module   │││
-    │   │  │                 │││
-    │   │  └─────────────────┘││
-    │   └─────────────────────┘│
-    └──────────────────────────┘
+    +-------------------------------------------------+
+    |   UI     : Simple user interface on top of API  |
+    |   Source : github.com/OFBDABV/SBTi_ui           |
+    |   Install: via source or dockerhub              |
+    |            docker.io/sbti/ui:latest             |
+    |                                                 |
+    | +-----------------------------------------+     |
+    | | REST API: Dockerized Flask/NGINX        |     |
+    | | Source : github.com/OFBDABV/SBTi_api    |     |
+    | | Install: via source or dockerhub        |     |
+    | |          dcoker.io/sbti/sbti/api:latest |     |
+    | |                                         |     |
+    | | +---------------------------------+     |     |
+    | | |                                 |     |     |
+    | | |Core   : Python Module           |     |     |
+    | | |Source : github.com/OFBDABV/SBTi |     |     |
+    | | |Install: via source or PyPi      |     |     |
+    | | |                                 |     |     |
+    | | +---------------------------------+     |     |
+    | +-----------------------------------------+     |
+    +-------------------------------------------------+
 
 
 ## Structure
