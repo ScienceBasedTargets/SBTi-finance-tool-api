@@ -3,7 +3,7 @@ This package helps companies and financial institutions to assess the temperatur
 targets, commitments, and investment and lending portfolios, and to use this information to develop 
 targets for official validation by the SBTi.
 
-This tool can be used either as a standalone Python package or as an API.
+Under the hood, this API uses the SBTi Python module.
 
 ## Structure
 The folder structure for this project is as follows:
@@ -14,13 +14,13 @@ The folder structure for this project is as follows:
     └── config                  # Config files for the Docker container
 
 ## Deployment
-The alignment tool can be used either as an standalone Python package or as an REST API.
-The API can be deployed as a Docker container. To do this a Docker file is provided.
+This service can be deployed in two ways, either as a standalone API or in conjunction with a no-frills UI.
+For both of these options a docker configuration has been set up. 
 
-In order to run the docker container locally on none linux machines one needs to install [Docker Desktop](https://www.docker.com/products/docker-desktop) available for Mac and Windows
+In order to run the docker container locally on non linux machines one needs to install [Docker Desktop](https://www.docker.com/products/docker-desktop) available for Mac and Windows
 
-
-Both the master and DEV branch have public images at docker hub. 
+### API-only
+Both the master and DEV branch have public images at docker hub. To run them, use the following commands: 
 
 ```bash
 docker run -d -p 5000:8080 sbti/sbti_tool:latest # to run  the latest stable release
@@ -29,14 +29,30 @@ or
 ```bash
 docker run -d -p 5000:8080 sbti/sbti_tool:DEV # to run the latest DEV version
 ```
-The UI should now be available at [http://localhost:5000/](http://localhost:5000/) and check [http://localhost:5000/docs/](http://localhost:5000/docs/) for the API documentation
+The API documentation should now be available at [http://localhost:5000/docs/](http://localhost:5000/docs/).
+
+### API and UI
+To launch both the API and the UI, you need to use the provided docker-compose files.
+This will spin up two containers that work in conjunction with one another.
+
+To launch the latest release:
+```bash
+docker-compose -f docker-compose-ui.yml -d --build
+``` 
+
+To use your local code-base:
+```bash
+docker-compose -f docker-compose-ui-dev.yml -d --build
+``` 
+
+The UI should now be available at [http://localhost:5000/](http://localhost:5000/) and check [http://localhost:5001/docs/](http://localhost:5001/docs/) for the API documentation
 
 To build an run the docker container locally use the following command:
 ```bash
 docker-compose up -d --build
 ```
 
-### Amazon Web Services
+## Deploy on Amazon Web Services
 These instructions assume that you've installed and configured the Amazon [AWS CLI tools](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) and the [ECS CLI tools](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_Configuration.html) with an IAM account that has at least write access to ECS and EC2 and the capability of creating AIM roles.
 
 1. Create a repository. 
