@@ -1,0 +1,12 @@
+version: '3'
+services:
+  ui:
+    image: sbti/ui:latest
+    ports:
+     - "5000:8080"
+     - "5001:8081"
+  api:
+    depends_on:
+      - ui
+    build: .
+    restart: always
