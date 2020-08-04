@@ -3,7 +3,19 @@ This package helps companies and financial institutions to assess the temperatur
 targets, commitments, and investment and lending portfolios, and to use this information to develop 
 targets for official validation by the SBTi.
 
-Under the hood, this API uses the SBTi Python module.
+Under the hood, this API uses the SBTi Python module. The complete structure that consists of a Python module, API and a UI looks as follows:
+
+    ┌──────────────────────────┐
+    │  UI                      │
+    │   ┌─────────────────────┐│
+    │   │ API                 ││
+    │   │  ┌─────────────────┐││
+    │   │  │ Python module   │││
+    │   │  │                 │││
+    │   │  └─────────────────┘││
+    │   └─────────────────────┘│
+    └──────────────────────────┘
+
 
 ## Structure
 The folder structure for this project is as follows:
