@@ -47,7 +47,7 @@ In order to run the docker container locally or non linux machines one needs to 
 The master branch of this repo has a public image at Dockerhub. To run them, use the following commands: 
 
 ```bash
-docker run -d -p 5000:8080 sbti/sbti_tool:latest # to run  the latest stable release
+docker run -d -p 5000:8080 sbti/api:latest # to run  the latest stable release
 ```
 In order to run a locally build version run:
 
