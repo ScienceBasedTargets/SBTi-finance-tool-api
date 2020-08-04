@@ -7,7 +7,7 @@ Under the hood, this API uses the SBTi Python module. The complete structure tha
 
     +-------------------------------------------------+
     |   UI     : Simple user interface on top of API  |
-    |   Install: via dockerhub              |
+    |   Install: via dockerhub                        |
     |            docker.io/sbti/ui:latest             |
     |                                                 |
     | +-----------------------------------------+     |
