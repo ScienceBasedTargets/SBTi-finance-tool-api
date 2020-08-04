@@ -8,5 +8,5 @@ services:
   api:
     depends_on:
       - ui
-    image: sbti/sbti_tool:latest
+    image: sbti/api:latest
     restart: always

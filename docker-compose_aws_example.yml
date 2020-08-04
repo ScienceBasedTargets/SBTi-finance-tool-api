@@ -1,7 +1,7 @@
 version: '3'
 services:
   app:
-    image: aws_account_id.dkr.ecr.region.amazonaws.com/sbti-ecs
+    image: docker.io/sbti/api:latest
     build: .
     ports:
      - "80:8080"
