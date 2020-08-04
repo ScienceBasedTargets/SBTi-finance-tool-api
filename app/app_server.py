@@ -99,18 +99,21 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         super().__init__()
 
     def post(self):
-
         json_data = request.get_json(force=True)
-
         data_providers = self._get_data_providers(json_data)
-
         default_score = json_data.get("default_score", self.config["default_score"])
         temperature_score = TemperatureScore(fallback_score=default_score)
 
+        input_data = pd.DataFrame(json_data["companies"])
         company_data = SBTi.data.get_company_data(data_providers, json_data["companies"])
-        targets = SBTi.data.get_targets(data_providers, json_data["companies"])
-
-        portfolio_data = pd.merge(left=company_data, right=targets, how='outer', on=['company_name', 'company_id'])
+        target_data = SBTi.data.get_targets(data_providers, json_data["companies"])
+        company_data = pd.merge(left=company_data,
+                                right=input_data[
+                                    [column
+                                     for column in input_data.columns
+                                     if column not in ["company_name"]]],
+                                how="left",
+                                on=["company_id"])
 
         aggregation_method = self.aggregation_map[self.config["aggregation_method"]]
         # TODO: Write this as a shorthand and throw an exception if the user defined a non existing aggregation
@@ -127,26 +130,17 @@ class TemperatureScoreEndpoint(BaseEndpoint):
             scenario = Scenario.from_dict(scenario)
             temperature_score.set_scenario(scenario)
 
-        if len(portfolio_data) == 0:
+        if len(company_data) == 0:
             return {
                        "success": False,
                        "message": "None of the companies in your portfolio could be found by the data provider"
                    }, 400
 
         # Target_Valuation_Protocol
-        target_valuation_protocol = TargetValuationProtocol(portfolio_data, company_data)
-
+        target_valuation_protocol = TargetValuationProtocol(target_data, company_data)
         portfolio_data = target_valuation_protocol.target_valuation_protocol()
 
-        # Add the user-defined columns to the data set for grouping later on
-        extra_columns = []
-        for company in json_data["companies"]:
-            for key, value in company.items():
-                if key not in ["company_name", "company_id"]:
-                    portfolio_data.loc[portfolio_data['company_name'] == company["company_name"], key] = value
-                    extra_columns.append(key)
-
-        scores = temperature_score.calculate(portfolio_data, extra_columns)
+        scores = temperature_score.calculate(portfolio_data)
 
         # After calculation we'll re-add the extra columns from the input
         for company in json_data["companies"]:
@@ -199,65 +193,14 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         return_dic = {
             "aggregated_scores": aggregations,
             # TODO: The scores are included twice now, once with all columns, and once with only a subset of the columns
-            "scores": scores.replace({np.nan: None}).to_dict(orient="records"),
+            "scores": scores.where(pd.notnull(scores), None).to_dict(orient="records"),
             "coverage": coverage,
             "companies": scores[include_columns].replace({np.nan: None}).to_dict(
                 orient="records"),
             "feature_distribution": column_distribution
         }
 
-        return_dic = convert_nan_to_none(return_dic)
-
         return return_dic
-
-
-def convert_nan_to_none(nested_dictionary):
-    """Convert NaN values to None in a list in a nested dictionary.
-    TODO: Temporary fix for front-end not supporting nan, will be deleted after Beta testing
-    TODO: Refactor this such that the NaNs are replaced in a data frame, instead of a dictionary
-
-    :param nested_dictionary: dictionary to return that possible contains NaN values
-    :type nested_dictionary: dict
-
-    :rtype: dict
-    :return: cleaned dictionary where all NaN values are converted to None
-    """
-    for parent, dictionary in nested_dictionary.items():
-        if isinstance(dictionary, list):
-            clean_list = []
-            for element in dictionary:
-                clean_element = element
-                if isinstance(element, dict):
-                    for x, y in element.items():
-                        if str(y) == 'nan':
-                            clean_element[x] = None
-                clean_list.append(clean_element)
-            nested_dictionary[parent] = clean_list
-
-        elif isinstance(dictionary, dict):
-            for key, value in dictionary.items():
-                if isinstance(value, dict):
-                    for time_frame, values in value.items():
-                        if isinstance(values, dict):
-                            for scope, scores_el in values.items():
-                                for k, v in scores_el.items():
-                                    if isinstance(v, list):
-                                        clean_v = []
-                                        for company in v:
-                                            clean_company = company
-                                            if isinstance(company, dict):
-                                                for identifier, number in company.items():
-                                                    if str(number) == 'nan':
-                                                        clean_company[identifier] = None
-                                                clean_v.append(clean_company)
-                                                scores_el[k] = clean_v
-
-                                    if str(v) == 'nan':
-                                        scores_el[k] = None
-                        if str(values) == 'nan':
-                            value[time_frame] = None
-
-    return nested_dictionary
 
 
 class DataProvidersEndpoint(BaseEndpoint):
