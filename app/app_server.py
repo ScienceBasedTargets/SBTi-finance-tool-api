@@ -142,6 +142,10 @@ class TemperatureScoreEndpoint(BaseEndpoint):
 
         scores = temperature_score.calculate(portfolio_data)
 
+        # Temperature score percentage breakdown by default score and target score
+        temperature_percentage_coverage = temperature_score.temperature_score_influence_percentage(
+            scores.copy(), aggregation_method)
+
         # After calculation we'll re-add the extra columns from the input
         for company in json_data["companies"]:
             for key, value in company.items():
@@ -168,11 +172,6 @@ class TemperatureScoreEndpoint(BaseEndpoint):
 
         portfolio_coverage_tvp = PortfolioCoverageTVP()
         coverage = portfolio_coverage_tvp.get_portfolio_coverage(portfolio_data, aggregation_method)
-
-        # Temperature score percentage breakdown by default score and target score
-        temperature_percentage_coverage = temperature_score.temperature_score_influence_percentage(portfolio_data,
-                                                                                                   json_data[
-                                                                                                       'aggregation_method'])
 
         if grouping:
             column_distribution = temperature_score.columns_percentage_distribution(portfolio_data,
