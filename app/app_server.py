@@ -146,12 +146,6 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         temperature_percentage_coverage = temperature_score.temperature_score_influence_percentage(
             scores.copy(), aggregation_method)
 
-        # After calculation we'll re-add the extra columns from the input
-        for company in json_data["companies"]:
-            for key, value in company.items():
-                if key not in ["company_name", "company_id"]:
-                    portfolio_data.loc[portfolio_data['company_name'] == company["company_name"], key] = value
-
         # Filter scope (s1s2, s3 or s1s2s3)
         if len(json_data.get("filter_scope_category", [])) > 0:
             scores = scores[scores["scope_category"].isin(json_data["filter_scope_category"])]
