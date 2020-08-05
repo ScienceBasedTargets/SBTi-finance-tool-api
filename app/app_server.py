@@ -136,7 +136,7 @@ class TemperatureScoreEndpoint(BaseEndpoint):
                        "message": "None of the companies in your portfolio could be found by the data provider"
                    }, 400
 
-        # Target_Valuation_Protocol
+        # Target validation
         target_validation = TargetValidation(target_data, company_data)
         portfolio_data = target_validation.target_validation()
 
