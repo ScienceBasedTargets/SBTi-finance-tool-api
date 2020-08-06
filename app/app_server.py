@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 
 from typing import List, Dict
@@ -49,6 +50,10 @@ class BaseEndpoint(Resource):
 
     def __init__(self):
         self.config = get_config()
+
+        # Set the logging level based on the config
+        root_logger = logging.getLogger()
+        root_logger.setLevel(self.config["verbosity"])
 
         self.data_providers = []
         for data_provider in self.config["data_providers"]:
