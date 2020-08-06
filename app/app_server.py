@@ -168,8 +168,7 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         coverage = portfolio_coverage_tvp.get_portfolio_coverage(portfolio_data, aggregation_method)
 
         if grouping:
-            column_distribution = temperature_score.columns_percentage_distribution(portfolio_data,
-                                                                                    json_data['grouping_columns'])
+            column_distribution = temperature_score.columns_percentage_distribution(portfolio_data, grouping)
         else:
             column_distribution = None
 
