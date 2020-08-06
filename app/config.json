@@ -1,5 +1,6 @@
 {
   "default_score": 3.2,
+  "verbosity": "INFO",
   "aggregation_method": "WATS",
   "frontend_path": "static/frontend/dist/frontend/",
   "data_providers": [
