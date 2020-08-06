@@ -60,24 +60,14 @@ class BaseEndpoint(Resource):
             data_provider["class"] = DATA_PROVIDER_MAP[data_provider["type"]](**data_provider["parameters"])
             self.data_providers.append(data_provider)
 
-        self.aggregation_map = {
-            "WATS": PortfolioAggregationMethod.WATS,
-            "TETS": PortfolioAggregationMethod.TETS,
-            "MOTS": PortfolioAggregationMethod.MOTS,
-            "EOTS": PortfolioAggregationMethod.EOTS,
-            "ECOTS": PortfolioAggregationMethod.ECOTS,
-            "AOTS": PortfolioAggregationMethod.AOTS,
-            "ROTS": PortfolioAggregationMethod.ROTS
-        }
-
     def _get_data_providers(self, json_data: Dict):
-        '''
+        """
         Determines which data provider and in which order should be used.
         :param json_data:
 
         :rtype: List
         :return: a list of data providers in order.
-        '''
+        """
         # TODO: Why is there a hard-coded Excel connector here?
         data_providers = []
         if "data_providers" in json_data:
@@ -93,12 +83,12 @@ class BaseEndpoint(Resource):
 
 
 class TemperatureScoreEndpoint(BaseEndpoint):
-    '''
+    """
     Generates the temperature aggregation scoring for the companies provided.
 
     :rtype: Dictionary
     :return: aggregation scoring per companies.
-    '''
+    """
 
     def __init__(self):
         super().__init__()
@@ -106,56 +96,32 @@ class TemperatureScoreEndpoint(BaseEndpoint):
     def post(self):
         json_data = request.get_json(force=True)
         data_providers = self._get_data_providers(json_data)
-        default_score = json_data.get("default_score", self.config["default_score"])
-        temperature_score = TemperatureScore(fallback_score=default_score)
 
         input_data = pd.DataFrame(json_data["companies"])
-        company_data = SBTi.data.get_company_data(data_providers, json_data["companies"])
-        target_data = SBTi.data.get_targets(data_providers, json_data["companies"])
-        company_data = pd.merge(left=company_data,
-                                right=input_data[
-                                    [column
-                                     for column in input_data.columns
-                                     if column not in ["company_name"]]],
-                                how="left",
+        company_data = SBTi.data.get_company_data(data_providers, input_data["company_id"].tolist())
+        target_data = SBTi.data.get_targets(data_providers, input_data["company_id"].tolist())
+        company_data = pd.merge(left=company_data, right=input_data.drop("company_name", axis=1), how="left",
                                 on=["company_id"])
-
-        aggregation_method = self.aggregation_map[self.config["aggregation_method"]]
-        # TODO: Write this as a shorthand and throw an exception if the user defined a non existing aggregation
-        if "aggregation_method" in json_data and json_data["aggregation_method"] in self.aggregation_map:
-            aggregation_method = self.aggregation_map[json_data["aggregation_method"]]
-
-        # Group aggregates by certain column names
-        grouping = json_data.get("grouping_columns", None)
-
-        scenario = json_data.get('scenario', None)
-        if scenario is not None and scenario["number"] > 0:
-            scenario['aggregation_method'] = aggregation_method
-            scenario['grouping'] = grouping
-            scenario = Scenario.from_dict(scenario)
-            temperature_score.set_scenario(scenario)
-
         if len(company_data) == 0:
             return {
                        "success": False,
                        "message": "None of the companies in your portfolio could be found by the data provider"
                    }, 400
 
+        default_score = json_data.get("default_score", self.config["default_score"])
+        aggregation_method = PortfolioAggregationMethod.from_string(json_data["aggregation_method"])
+        grouping = json_data.get("grouping_columns", None)
+        scenario = Scenario.from_dict(json_data.get('scenario', None))
+
+        temperature_score = TemperatureScore(fallback_score=default_score, scenario=scenario, grouping=grouping,
+                                             aggregation_method=aggregation_method)
+
         # Target validation
         target_validation = TargetValidation(target_data, company_data)
         portfolio_data = target_validation.target_validation()
 
         scores = temperature_score.calculate(portfolio_data)
-
-        # Temperature score percentage breakdown by default score and target score
-        temperature_percentage_coverage = temperature_score.temperature_score_influence_percentage(
-            scores.copy(), aggregation_method)
-
-        # After calculation we'll re-add the extra columns from the input
-        for company in json_data["companies"]:
-            for key, value in company.items():
-                if key not in ["company_name", "company_id"]:
-                    portfolio_data.loc[portfolio_data['company_name'] == company["company_name"], key] = value
+        aggregations = temperature_score.aggregate_scores(scores)
 
         # Filter scope (s1s2, s3 or s1s2s3)
         if len(json_data.get("filter_scope_category", [])) > 0:
@@ -164,12 +130,6 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         # Filter timeframe (short, mid, long)
         if len(json_data.get("filter_time_frame", [])) > 0:
             scores = scores[scores["time_frame"].isin(json_data["filter_time_frame"])]
-
-        scores = scores.copy()
-        # TODO: Why are the scores rounded here, even though there are still calculation left to do?
-        scores = scores.round(2)
-
-        aggregations = temperature_score.aggregate_scores(scores, aggregation_method, grouping)
 
         # Include columns
         include_columns = ["company_name", "scope_category", "time_frame", "temperature_score"] + \
@@ -184,27 +144,17 @@ class TemperatureScoreEndpoint(BaseEndpoint):
         else:
             column_distribution = None
 
-        temperature_percentage_coverage = pd.DataFrame.from_dict(temperature_percentage_coverage).replace(
-            {np.nan: None}).to_dict()
-        aggregations = temperature_score.merge_percentage_coverage_to_aggregations(aggregations,
-                                                                                   temperature_percentage_coverage)
-
-        # Dump raw data to compute the scores
-        anonymize_data_dump = json_data.get("anonymize_data_dump", False)
-        if anonymize_data_dump:
+        if json_data.get("anonymize_data_dump", False):
             scores = temperature_score.anonymize_data_dump(scores)
 
-        return_dic = {
+        return {
             "aggregated_scores": aggregations,
             # TODO: The scores are included twice now, once with all columns, and once with only a subset of the columns
             "scores": scores.where(pd.notnull(scores), None).to_dict(orient="records"),
             "coverage": coverage,
-            "companies": scores[include_columns].replace({np.nan: None}).to_dict(
-                orient="records"),
+            "companies": scores[include_columns].replace({np.nan: None}).to_dict(orient="records"),
             "feature_distribution": column_distribution
         }
-
-        return return_dic
 
 
 class DataProvidersEndpoint(BaseEndpoint):
@@ -227,9 +177,9 @@ class DataProvidersEndpoint(BaseEndpoint):
 
 
 class DocumentationEndpoint(Resource):
-    '''
+    """
     Supports flask_swagger documentation endpoint
-    '''
+    """
 
     def get(self, path):
         return send_from_directory('static', path)
