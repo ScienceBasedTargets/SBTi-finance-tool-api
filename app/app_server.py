@@ -18,9 +18,7 @@ import SBTi
 from SBTi.data.csv import CSVProvider
 from SBTi.data.excel import ExcelProvider
 from SBTi.portfolio_aggregation import PortfolioAggregationMethod
-from SBTi.portfolio_coverage_tvp import PortfolioCoverageTVP
-from SBTi.temperature_score import TemperatureScore, Scenario
-from SBTi.target_validation import TargetValidation
+from SBTi.temperature_score import Scenario
 
 UPLOAD_FOLDER = 'data'
 app = Flask(__name__)
@@ -68,6 +66,7 @@ class BaseEndpoint(Resource):
         :rtype: List
         :return: a list of data providers in order.
         """
+        # TODO: Move this to the data provider
         # TODO: Why is there a hard-coded Excel connector here?
         data_providers = []
         if "data_providers" in json_data:
@@ -95,57 +94,31 @@ class TemperatureScoreEndpoint(BaseEndpoint):
 
     def post(self):
         json_data = request.get_json(force=True)
-        data_providers = self._get_data_providers(json_data)
 
-        input_data = pd.DataFrame(json_data["companies"])
-        company_data = SBTi.data.get_company_data(data_providers, input_data["company_id"].tolist())
-        target_data = SBTi.data.get_targets(data_providers, input_data["company_id"].tolist())
-        company_data = pd.merge(left=company_data, right=input_data.drop("company_name", axis=1), how="left",
-                                on=["company_id"])
-        if len(company_data) == 0:
-            return {
-                       "success": False,
-                       "message": "None of the companies in your portfolio could be found by the data provider"
-                   }, 400
-
-        default_score = json_data.get("default_score", self.config["default_score"])
-        aggregation_method = PortfolioAggregationMethod.from_string(json_data["aggregation_method"])
-        grouping = json_data.get("grouping_columns", None)
-        scenario = Scenario.from_dict(json_data.get('scenario', None))
-
-        temperature_score = TemperatureScore(fallback_score=default_score, scenario=scenario, grouping=grouping,
-                                             aggregation_method=aggregation_method)
-
-        # Target validation
-        target_validation = TargetValidation(target_data, company_data)
-        portfolio_data = target_validation.target_validation()
-
-        scores = temperature_score.calculate(portfolio_data)
-        aggregations = temperature_score.aggregate_scores(scores)
+        try:
+            scores, aggregations, coverage, column_distribution = SBTi.pipeline(
+                data_providers=self._get_data_providers(json_data),
+                portfolio=pd.DataFrame(json_data["companies"]),
+                fallback_score=json_data.get("default_score", self.config["default_score"]),
+                aggregation_method=PortfolioAggregationMethod.from_string(json_data["aggregation_method"]),
+                grouping=json_data.get("grouping_columns", None),
+                scenario=Scenario.from_dict(json_data.get('scenario', None)),
+                anonymize=json_data.get("anonymize_data_dump", False)
+            )
+        except ValueError as e:
+            return {"success": False, "message": str(e)}, 400
 
         # Filter scope (s1s2, s3 or s1s2s3)
         if len(json_data.get("filter_scope_category", [])) > 0:
             scores = scores[scores["scope_category"].isin(json_data["filter_scope_category"])]
 
-        # Filter timeframe (short, mid, long)
+        # Filter time frame (short, mid, long)
         if len(json_data.get("filter_time_frame", [])) > 0:
             scores = scores[scores["time_frame"].isin(json_data["filter_time_frame"])]
 
         # Include columns
         include_columns = ["company_name", "scope_category", "time_frame", "temperature_score"] + \
                           [column for column in json_data.get("include_columns", []) if column in scores.columns]
-
-        portfolio_coverage_tvp = PortfolioCoverageTVP()
-        coverage = portfolio_coverage_tvp.get_portfolio_coverage(portfolio_data, aggregation_method)
-
-        if grouping:
-            column_distribution = temperature_score.columns_percentage_distribution(portfolio_data,
-                                                                                    json_data['grouping_columns'])
-        else:
-            column_distribution = None
-
-        if json_data.get("anonymize_data_dump", False):
-            scores = temperature_score.anonymize_data_dump(scores)
 
         return {
             "aggregated_scores": aggregations,
