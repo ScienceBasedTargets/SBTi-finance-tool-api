@@ -10,6 +10,9 @@ from SBTi.interfaces import PortfolioCompany, ScenarioInterface
 
 from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
 from pydantic import BaseModel
+import mimetypes
+import SBTi
+from SBTi.portfolio_aggregation import PortfolioAggregationMethod
 
 app = FastAPI(
     title="SBTi Finance Temperature Alignment tool",
@@ -19,15 +22,9 @@ app = FastAPI(
     version="0.1.0",
 )
 
-import mimetypes
 
 mimetypes.init()
-
-import SBTi
-from SBTi.portfolio_aggregation import PortfolioAggregationMethod
-
 UPLOAD_FOLDER = 'data'
-
 
 with open('config.json') as f_config:
     config = json.load(f_config)

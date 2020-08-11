@@ -4,10 +4,13 @@ Flask==1.1.2
 flask-swagger-ui==3.25.0
 flask-restful==0.3.8
 pandas==1.0.3
+requests==2.23.0
+python-multipart==0.0.5
+pydantic==1.6.1
 xlrd==1.2.0
 uvicorn==0.11.8
 fastapi==0.61.0
 git+https://github.com/maxcountryman/flask-uploads.git
 # Uncomment the next line to use the current development version from Github
-#git+git://github.com/OFBDABV/SBTi
-SBTi
+git+git://github.com/OFBDABV/SBTi@DEV_fastapi
+# SBTi
