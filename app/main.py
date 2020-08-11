@@ -6,20 +6,16 @@ from typing import List, Optional
 import pandas as pd
 import numpy as np
 import uvicorn
-from SBTi import DataProvider
-from SBTi.data.bloomberg import Bloomberg
-from SBTi.data.cdp import CDP
-from SBTi.data.iss import ISS
-from SBTi.data.trucost import Trucost
-from SBTi.data.urgentum import Urgentum
-from SBTi.interfaces.interfaces import PortfolioCompany, ScenarioInterface
+from SBTi.interfaces import PortfolioCompany, ScenarioInterface
 
 from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI(
     title="SBTi Finance Temperature Alignment tool",
-    description="This tool helps companies and financial institutions to assess the temperature alignment of current targets, commitments, and investment and lending portfolios, and to use this information to develop targets for official validation by the SBTi.",
+    description="This tool helps companies and financial institutions to assess the temperature alignment of current "
+                "targets, commitments, and investment and lending portfolios, and to use this information to develop "
+                "targets for official validation by the SBTi.",
     version="0.1.0",
 )
 
@@ -28,60 +24,17 @@ import mimetypes
 mimetypes.init()
 
 import SBTi
-from SBTi.data.csv import CSVProvider
-from SBTi.data.excel import ExcelProvider
 from SBTi.portfolio_aggregation import PortfolioAggregationMethod
 
 UPLOAD_FOLDER = 'data'
-
-DATA_PROVIDER_MAP = {
-    "excel": ExcelProvider,
-    "csv": CSVProvider,
-    "bloomberg": Bloomberg,
-    "cdp": CDP,
-    "iss": ISS,
-    "trucost": Trucost,
-    "urgentum": Urgentum,
-}
 
 
 with open('config.json') as f_config:
     config = json.load(f_config)
 
 
-def _get_data_providers(data_providers_input: List[str]) -> List[DataProvider]:
-    """
-    Determines which data provider and in which order should be used.
-    :param json_data:
-
-    :rtype: List
-    :return: a list of data providers in order.
-    """
-    # TODO: Move this to the data provider
-    data_providers = []
-    for data_provider in config["data_providers"]:
-        data_provider["class"] = DATA_PROVIDER_MAP[data_provider["type"]](**data_provider["parameters"])
-        data_providers.append(data_provider)
-
-    selected_data_providers = []
-    for data_provider_name in data_providers_input:
-        for data_provider in data_providers:
-            if data_provider["name"] == data_provider_name:
-                selected_data_providers.append(data_provider["class"])
-                break
-
-    # TODO: When the user did give us data providers, but we can't match them this fails silently, maybe we should
-    # fail louder
-    if len(selected_data_providers) == 0:
-        data_providers = [data_provider["class"] for data_provider in data_providers]
-    return data_providers
-
-
 class RequestTemperatureScore(BaseModel):
     data_providers: Optional[List[str]] = []
-    """
-    The list of companies
-    """
     companies: List[PortfolioCompany]
     default_score: float
     aggregation_method: Optional[str] = "WATS"
@@ -141,7 +94,7 @@ def calculate_temperature_score(
     """
     try:
         scores, aggregations, coverage, column_distribution = SBTi.pipeline(
-            data_providers=_get_data_providers(data_providers),
+            data_providers=SBTi.data.get_data_providers(config["data_providers"], data_providers),
             portfolio=companies,
             fallback_score=default_score,
             filter_time_frame=filter_time_frame,
