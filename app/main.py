@@ -6,6 +6,7 @@ from typing import List, Optional
 import pandas as pd
 import numpy as np
 import uvicorn
+from SBTi import DataProvider
 from SBTi.data.bloomberg import Bloomberg
 from SBTi.data.cdp import CDP
 from SBTi.data.iss import ISS
@@ -13,10 +14,14 @@ from SBTi.data.trucost import Trucost
 from SBTi.data.urgentum import Urgentum
 from SBTi.interfaces.interfaces import PortfolioCompany, ScenarioInterface
 
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI()
+app = FastAPI(
+    title="SBTi Finance Temperature Alignment tool",
+    description="This tool helps companies and financial institutions to assess the temperature alignment of current targets, commitments, and investment and lending portfolios, and to use this information to develop targets for official validation by the SBTi.",
+    version="0.1.0",
+)
 
 import mimetypes
 
@@ -40,24 +45,11 @@ DATA_PROVIDER_MAP = {
 }
 
 
-class RequestTemperatureScore(BaseModel):
-    data_providers: Optional[List[str]] = []
-    companies: List[PortfolioCompany]
-    default_score: float
-    aggregation_method: Optional[str] = "WATS"
-    grouping_columns: Optional[List[str]] = None
-    include_columns: Optional[List[str]] = []
-    scenario: Optional[ScenarioInterface] = None
-    anonymize_data_dump: Optional[bool] = False
-    filter_scope_category: Optional[List[str]] = []
-    filter_time_frame: Optional[List[str]] = []
-
-
 with open('config.json') as f_config:
     config = json.load(f_config)
 
 
-def _get_data_providers(data_providers_input: List[str]):
+def _get_data_providers(data_providers_input: List[str]) -> List[DataProvider]:
     """
     Determines which data provider and in which order should be used.
     :param json_data:
@@ -85,40 +77,109 @@ def _get_data_providers(data_providers_input: List[str]):
     return data_providers
 
 
-@app.post("/temperature_score/")
-def calculate_temperature_score(data: RequestTemperatureScore):
+class RequestTemperatureScore(BaseModel):
+    data_providers: Optional[List[str]] = []
+    """
+    The list of companies
+    """
+    companies: List[PortfolioCompany]
+    default_score: float
+    aggregation_method: Optional[str] = "WATS"
+    grouping_columns: Optional[List[str]] = None
+    include_columns: Optional[List[str]] = []
+    scenario: Optional[ScenarioInterface] = None
+    anonymize_data_dump: Optional[bool] = False
+    filter_scope_category: Optional[List[str]] = []
+    filter_time_frame: Optional[List[str]] = []
+
+
+class ResponseTemperatureScore(BaseModel):
+    aggregated_scores: dict
+    scores: List[dict]
+    coverage: float
+    companies: List[dict]
+    feature_distribution: Optional[dict]
+
+
+@app.post("/temperature_score/", response_model=ResponseTemperatureScore)
+def calculate_temperature_score(
+        companies: List[PortfolioCompany] = Body(..., description="A portfolio containing the companies"),
+        default_score: float = Body(
+            default=config["default_score"],
+            gte=0,
+            description="The default score to fall back on when there's no target available."),
+        data_providers: Optional[List[str]] = Body(
+            default=[],
+            description="A list of data provider names to use. These names should be available in the list that can be "
+                        "retrieved through the /data_providers/ endpoint."),
+        aggregation_method: Optional[str] = Body(
+            default=config["aggregation_method"],
+            description="The aggregation method to use. This can be one of the following 'WATS', 'TETS', 'MOTS', "
+                        "'EOTS', 'ECOTS', 'AOTS'"),
+        grouping_columns: Optional[List[str]] = Body(
+            default=None,
+            description="A list of column names that should be grouped on."),
+        include_columns: Optional[List[str]] = Body(
+            default=[],
+            description="A list of column names that should be included in the output."),
+        scenario: Optional[ScenarioInterface] = Body(
+            default=None,
+            description="The scenario that should be used. This will change (some of the) targets, to simulate a "
+                        "what-if scenario."),
+        anonymize_data_dump: Optional[bool] = Body(
+            default=False,
+            description="Whether or not the resulting data set should be anonymized or not."),
+        filter_scope_category: Optional[List[str]] = Body(
+            default=[],
+            description="The scopes that should be included in the results."),
+        filter_time_frame: Optional[List[str]] = Body(
+            default=[],
+            description="The time frames that should be included in the results.")
+) -> ResponseTemperatureScore:
+    """
+    Calculate the temperature score for a given set of parameters.
+    """
     try:
         scores, aggregations, coverage, column_distribution = SBTi.pipeline(
-            data_providers=_get_data_providers(data.data_providers),
-            portfolio=data.companies,
-            fallback_score=data.default_score,
-            filter_time_frame=data.filter_time_frame,
-            filter_scope_category=data.filter_scope_category,
-            aggregation_method=PortfolioAggregationMethod.from_string(data.aggregation_method),
-            grouping=data.grouping_columns,
-            scenario=SBTi.temperature_score.Scenario.from_interface(data.scenario),
-            anonymize=data.anonymize_data_dump
+            data_providers=_get_data_providers(data_providers),
+            portfolio=companies,
+            fallback_score=default_score,
+            filter_time_frame=filter_time_frame,
+            filter_scope_category=filter_scope_category,
+            aggregation_method=PortfolioAggregationMethod.from_string(aggregation_method),
+            grouping=grouping_columns,
+            scenario=SBTi.temperature_score.Scenario.from_interface(scenario),
+            anonymize=anonymize_data_dump
         )
     except ValueError as e:
-        return {"success": False, "message": str(e)}, 400
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     # Include columns
     include_columns = ["company_name", "scope_category", "time_frame", "temperature_score"] + \
-                      [column for column in data.include_columns if column in scores.columns]
+                      [column for column in include_columns if column in scores.columns]
 
-    return {
-        "aggregated_scores": aggregations,
-        # TODO: The scores are included twice now, once with all columns, and once with only a subset of the columns
-        "scores": scores.where(pd.notnull(scores), None).to_dict(orient="records"),
-        "coverage": coverage,
-        "companies": scores[include_columns].replace({np.nan: None}).to_dict(orient="records"),
-        "feature_distribution": column_distribution
-    }
+    return ResponseTemperatureScore(
+        aggregated_scores=aggregations,
+        scores=scores.where(pd.notnull(scores), None).to_dict(orient="records"),
+        coverage=coverage,
+        companies=scores[include_columns].replace({np.nan: None}).to_dict(orient="records"),
+        feature_distribution=column_distribution,
+    )
 
 
-@app.get("/data_providers/")
-def get_data_providers():
-    return [{"name": data_provider["name"], "type": data_provider["type"]}
+class ResponseDataProvider(BaseModel):
+    name: str
+    type: str
+
+
+@app.get("/data_providers/", response_model=List[ResponseDataProvider])
+def get_data_providers() -> List[ResponseDataProvider]:
+    """
+    Get a list of the available data providers.
+    """
+    return [ResponseDataProvider(name=data_provider["name"], type=data_provider["type"])
             for data_provider in config["data_providers"]]
 
 
