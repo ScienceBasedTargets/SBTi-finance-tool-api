@@ -25,13 +25,13 @@ RUN rm /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default \
 
 COPY app /project/app
 COPY config/nginx.conf /etc/nginx/nginx.conf
-COPY config/flask-site-nginx.conf /etc/nginx/sites-available/flask-site-nginx.conf
+COPY config/api-nginx.conf /etc/nginx/sites-available/api-nginx.conf
 COPY config/supervisord.conf /etc/supervisord.conf
 COPY app/config.json /project/config.json
 COPY app/data /project/data
 
 
-RUN ln -s /etc/nginx/sites-available/flask-site-nginx.conf /etc/nginx/sites-enabled/flask-site-nginx.conf \
+RUN ln -s /etc/nginx/sites-available/api-nginx.conf /etc/nginx/sites-enabled/api-nginx.conf \
  && chown -R dock_sbtiapi:dock_sbtiapi /project /vol
 
 WORKDIR /project

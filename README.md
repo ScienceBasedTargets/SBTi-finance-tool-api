@@ -102,7 +102,7 @@ ecs-cli compose -f docker-compose_aws.yml up --cluster-config sbti-ecs-conf
 7. Go to the EC2 service
 8. In the instance list find the instance running the Docker image
 9. Copy the public IP address of the instance
-10. In ```config/flask-site-nginx.conf``` update the server name to the public IP.
+10. In ```config/api-nginx.conf``` update the server name to the public IP.
 11. Now we need to rebuild and re-upload the image.
 ```bash
 docker-compose -f docker-compose_aws.yml build --no-cache
