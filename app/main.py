@@ -15,7 +15,7 @@ import SBTi
 from SBTi.portfolio_aggregation import PortfolioAggregationMethod
 
 app = FastAPI(
-    title="SBTi Finance Temperature Alignment tool",
+    title="SBTi Finance Temperature Alignment tool API",
     description="This tool helps companies and financial institutions to assess the temperature alignment of current "
                 "targets, commitments, and investment and lending portfolios, and to use this information to develop "
                 "targets for official validation by the SBTi.",
@@ -135,6 +135,11 @@ def get_data_providers() -> List[ResponseDataProvider]:
 
 @app.post("/parse_portfolio/")
 def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
+    """
+    Parse a portfolio Excel file.
+
+    *Note: This endpoint is only for use in the frontend*
+    """
     df = pd.read_excel(file, skiprows=int(skiprows))
 
     return {'portfolio': df.replace(r'^\s*$', np.nan, regex=True).dropna(how='all').replace({np.nan: None}).to_dict(
@@ -143,6 +148,12 @@ def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
 
 @app.post("/import_data_provider/")
 def import_data_provider(file: UploadFile = File(...)):
+    """
+    Import a new Excel data provider file. This will overwrite the current "dummy" data provider input file.
+
+    *Note: This endpoint is only for use in the frontend during the beta testing phase.*
+    """
+    # TODO: Remove this endpoint after the beta testing phase
     file_name = file.filename
     file_type = file_name.split('.')[-1]
     if file_type == 'xlsx':
