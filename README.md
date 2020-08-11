@@ -11,7 +11,7 @@ Under the hood, this API uses the SBTi Python module. The complete structure tha
     |            docker.io/sbti/ui:latest             |
     |                                                 |
     | +-----------------------------------------+     |
-    | | REST API: Dockerized Flask/NGINX        |     |
+    | | REST API: Dockerized FasAPO/NGINX       |     |
     | | Source : github.com/OFBDABV/SBTi_api    |     |
     | | Install: via source or dockerhub        |     |
     | |          docker.io/sbti/sbti/api:latest |     |
@@ -34,7 +34,7 @@ The folder structure for this project is as follows:
 
     .
     ├── .github                 # Github specific files (Github Actions workflows)
-    ├── app                     # Flask app files for the API endpoints
+    ├── app                     # FastAPI app files for the API endpoints
     └── config                  # Config files for the Docker container
 
 ## Deployment
