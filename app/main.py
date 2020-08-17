@@ -1,7 +1,7 @@
 import json
 import os
 
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import pandas as pd
 import numpy as np
@@ -31,12 +31,11 @@ with open('config.json') as f_config:
 
 
 class ResponseTemperatureScore(BaseModel):
-    aggregated_scores: dict
-    # aggregated_scores: ScoreAggregations
+    aggregated_scores: ScoreAggregations
     scores: List[dict]
     coverage: float
     companies: List[dict]
-    feature_distribution: Optional[dict]
+    feature_distribution: Optional[Dict[str, int]]
 
 
 @app.post("/temperature_score/", response_model=ResponseTemperatureScore, response_model_exclude_none=True)
