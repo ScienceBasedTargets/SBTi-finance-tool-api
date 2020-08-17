@@ -123,10 +123,10 @@ def get_data_providers() -> List[ResponseDataProvider]:
             for data_provider in config["data_providers"]]
 
 
-@app.post("/parse_portfolio/")
+@app.post("/parse_portfolio/", response_model=List[Dict])
 def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
     """
-    Parse a portfolio Excel file.
+    Parse a portfolio Excel file and return it as a list of dictionaries.
 
     *Note: This endpoint is only for use in the frontend*
     """
@@ -159,9 +159,9 @@ def import_data_provider(file: UploadFile = File(...)):
                     return {'POST Request': {'Response': {'Status Code': 400, 'Message': 'Error. File did not save.'}}}
         os.rename(os.path.join(UPLOAD_FOLDER, 'InputFormat_tmp.xlsx'),
                   os.path.join(UPLOAD_FOLDER, 'InputFormat.xlsx'))
-        return {'POST Request': {'Response': {'Status Code': 200, 'Message': 'Data Provider Imported'}}}
+        return {'detail': 'Data Provider Imported'}
     else:
-        return {'POST Request': {'Response': {'Status Code': 400, 'Message': 'Error. File did not save.'}}}
+        raise HTTPException(status_code=500, detail='Error. File did not save.')
 
 
 if __name__ == "__main__":
