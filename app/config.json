@@ -8,7 +8,7 @@
       "type": "excel",
       "name": "Excel",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
+        "path": "data/input_format.xlsx"
       }
     },
     {

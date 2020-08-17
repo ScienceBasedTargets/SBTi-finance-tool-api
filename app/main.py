@@ -6,7 +6,7 @@ from typing import List, Optional
 import pandas as pd
 import numpy as np
 import uvicorn
-from SBTi.interfaces import PortfolioCompany, ScenarioInterface
+from SBTi.interfaces import PortfolioCompany, ScenarioInterface, EScope, ETimeFrames, ScoreAggregations
 
 from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
 from pydantic import BaseModel
@@ -22,7 +22,6 @@ app = FastAPI(
     version="0.1.0",
 )
 
-
 mimetypes.init()
 UPLOAD_FOLDER = 'data'
 
@@ -30,28 +29,16 @@ with open('config.json') as f_config:
     config = json.load(f_config)
 
 
-class RequestTemperatureScore(BaseModel):
-    data_providers: Optional[List[str]] = []
-    companies: List[PortfolioCompany]
-    default_score: float
-    aggregation_method: Optional[str] = "WATS"
-    grouping_columns: Optional[List[str]] = None
-    include_columns: Optional[List[str]] = []
-    scenario: Optional[ScenarioInterface] = None
-    anonymize_data_dump: Optional[bool] = False
-    filter_scope_category: Optional[List[str]] = []
-    filter_time_frame: Optional[List[str]] = []
-
-
 class ResponseTemperatureScore(BaseModel):
     aggregated_scores: dict
+    # aggregated_scores: ScoreAggregations
     scores: List[dict]
     coverage: float
     companies: List[dict]
     feature_distribution: Optional[dict]
 
 
-@app.post("/temperature_score/", response_model=ResponseTemperatureScore)
+@app.post("/temperature_score/", response_model=ResponseTemperatureScore, response_model_exclude_none=True)
 def calculate_temperature_score(
         companies: List[PortfolioCompany] = Body(..., description="A portfolio containing the companies"),
         default_score: float = Body(
@@ -62,7 +49,7 @@ def calculate_temperature_score(
             default=[],
             description="A list of data provider names to use. These names should be available in the list that can be "
                         "retrieved through the /data_providers/ endpoint."),
-        aggregation_method: Optional[str] = Body(
+        aggregation_method: Optional[PortfolioAggregationMethod] = Body(
             default=config["aggregation_method"],
             description="The aggregation method to use. This can be one of the following 'WATS', 'TETS', 'MOTS', "
                         "'EOTS', 'ECOTS', 'AOTS'"),
@@ -79,10 +66,10 @@ def calculate_temperature_score(
         anonymize_data_dump: Optional[bool] = Body(
             default=False,
             description="Whether or not the resulting data set should be anonymized or not."),
-        filter_scope_category: Optional[List[str]] = Body(
+        scopes: Optional[List[EScope]] = Body(
             default=[],
             description="The scopes that should be included in the results."),
-        filter_time_frame: Optional[List[str]] = Body(
+        time_frames: Optional[List[ETimeFrames]] = Body(
             default=[],
             description="The time frames that should be included in the results.")
 ) -> ResponseTemperatureScore:
@@ -90,13 +77,13 @@ def calculate_temperature_score(
     Calculate the temperature score for a given set of parameters.
     """
     try:
-        scores, aggregations, coverage, column_distribution = SBTi.pipeline(
+        scores, aggregations, coverage, column_distribution = SBTi.utils.pipeline(
             data_providers=SBTi.data.get_data_providers(config["data_providers"], data_providers),
             portfolio=companies,
             fallback_score=default_score,
-            filter_time_frame=filter_time_frame,
-            filter_scope_category=filter_scope_category,
-            aggregation_method=PortfolioAggregationMethod.from_string(aggregation_method),
+            time_frames=time_frames,
+            scopes=scopes,
+            aggregation_method=aggregation_method,
             grouping=grouping_columns,
             scenario=SBTi.temperature_score.Scenario.from_interface(scenario),
             anonymize=anonymize_data_dump
@@ -107,7 +94,7 @@ def calculate_temperature_score(
         raise HTTPException(status_code=500, detail=str(e))
 
     # Include columns
-    include_columns = ["company_name", "scope_category", "time_frame", "temperature_score"] + \
+    include_columns = ["company_name", "scope", "time_frame", "temperature_score"] + \
                       [column for column in include_columns if column in scores.columns]
 
     return ResponseTemperatureScore(
