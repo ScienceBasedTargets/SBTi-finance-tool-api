@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import uvicorn
 from SBTi.interfaces import PortfolioCompany, ScenarioInterface, EScope, ETimeFrames, ScoreAggregations
+from SBTi.portfolio_coverage_tvp import PortfolioCoverageTVP
 
 from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
 from pydantic import BaseModel
@@ -51,8 +52,7 @@ def calculate_temperature_score(
                         "retrieved through the /data_providers/ endpoint."),
         aggregation_method: Optional[PortfolioAggregationMethod] = Body(
             default=config["aggregation_method"],
-            description="The aggregation method to use. This can be one of the following 'WATS', 'TETS', 'MOTS', "
-                        "'EOTS', 'ECOTS', 'AOTS'"),
+            description="The aggregation method to use."),
         grouping_columns: Optional[List[str]] = Body(
             default=None,
             description="A list of column names that should be grouped on."),
@@ -77,9 +77,10 @@ def calculate_temperature_score(
     Calculate the temperature score for a given set of parameters.
     """
     try:
-        scores, aggregations, coverage, column_distribution = SBTi.utils.pipeline(
-            data_providers=SBTi.data.get_data_providers(config["data_providers"], data_providers),
-            portfolio=companies,
+        data_providers = SBTi.data.get_data_providers(config["data_providers"], data_providers)
+        portfolio_data = SBTi.utils.get_data(data_providers, companies)
+        scores, aggregations, column_distribution = SBTi.utils.calculate(
+            portfolio_data=portfolio_data,
             fallback_score=default_score,
             time_frames=time_frames,
             scopes=scopes,
@@ -88,6 +89,9 @@ def calculate_temperature_score(
             scenario=SBTi.temperature_score.Scenario.from_interface(scenario),
             anonymize=anonymize_data_dump
         )
+
+        coverage = PortfolioCoverageTVP().get_portfolio_coverage(portfolio_data, aggregation_method)
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
