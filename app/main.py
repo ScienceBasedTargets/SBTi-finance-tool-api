@@ -1,7 +1,7 @@
 import json
 import os
 
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 import pandas as pd
 import numpy as np
@@ -26,7 +26,7 @@ app = FastAPI(
 mimetypes.init()
 UPLOAD_FOLDER = 'data'
 
-with open('config.json') as f_config:
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')) as f_config:
     config = json.load(f_config)
 
 
@@ -39,7 +39,10 @@ class ResponseTemperatureScore(BaseModel):
 
 @app.post("/temperature_score/", response_model=ResponseTemperatureScore, response_model_exclude_none=True)
 def calculate_temperature_score(
-        companies: List[PortfolioCompany] = Body(..., description="A portfolio containing the companies"),
+        companies: List[PortfolioCompany] = Body(
+            ...,
+            description="A portfolio containing the companies. If you want to use other fields later on or for grouping "
+                        "you can include these in the 'user_fields' object."),
         default_score: float = Body(
             default=config["default_score"],
             gte=0,
@@ -121,7 +124,7 @@ def get_data_providers() -> List[ResponseDataProvider]:
             for data_provider in config["data_providers"]]
 
 
-@app.post("/parse_portfolio/", response_model=dict)
+@app.post("/parse_portfolio/", response_model=List[dict])
 def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
     """
     Parse a portfolio Excel file and return it as a list of dictionaries.
@@ -130,12 +133,11 @@ def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
     """
     df = pd.read_excel(file, skiprows=int(skiprows))
 
-    return {'portfolio': df.replace(r'^\s*$', np.nan, regex=True).dropna(how='all').replace({np.nan: None}).to_dict(
-            orient="records")}
+    return df.replace(r'^\s*$', np.nan, regex=True).dropna(how='all').replace({np.nan: None}).to_dict(orient="records")
 
 
 @app.post("/import_data_provider/")
-def import_data_provider(file: UploadFile = File(...)):
+def import_data_provider(file: UploadFile = File(...)) -> HTTPValidationError:
     """
     Import a new Excel data provider file. This will overwrite the current "dummy" data provider input file.
 
@@ -147,20 +149,21 @@ def import_data_provider(file: UploadFile = File(...)):
     if file_type == 'xlsx':
         x = 10000000 / 10000
         xi = 0
-        with open(os.path.join(UPLOAD_FOLDER, 'InputFormat_tmp.xlsx'), 'ab') as f:
+        with open(os.path.join(UPLOAD_FOLDER, 'input_format_tmp.xlsx'), 'ab') as f:
             for chunk in iter(lambda: file.file.read(10000), b''):
                 f.write(chunk)
                 xi += 1
                 if xi > x:
                     f.close()
-                    os.remove(os.path.join(UPLOAD_FOLDER, 'InputFormat_tmp.xlsx'))
+                    os.remove(os.path.join(UPLOAD_FOLDER, 'input_format_tmp.xlsx'))
                     return {'POST Request': {'Response': {'Status Code': 400, 'Message': 'Error. File did not save.'}}}
-        os.rename(os.path.join(UPLOAD_FOLDER, 'InputFormat_tmp.xlsx'),
-                  os.path.join(UPLOAD_FOLDER, 'InputFormat.xlsx'))
+        os.replace(os.path.join(UPLOAD_FOLDER, 'input_format_tmp.xlsx'),
+                   os.path.join(UPLOAD_FOLDER, 'input_format.xlsx'))
         return {'detail': 'Data Provider Imported'}
     else:
         raise HTTPException(status_code=500, detail='Error. File did not save.')
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="127.0.0.1", port=5000, log_level="info", reload=True)
+    uvicorn.run("main:app", host=config["server"]["host"], port=config["server"]["port"],
+                log_level=config["server"]["log_level"], reload=config["server"]["reload"])
