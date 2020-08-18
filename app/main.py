@@ -35,7 +35,6 @@ class ResponseTemperatureScore(BaseModel):
     scores: List[dict]
     coverage: float
     companies: List[dict]
-    feature_distribution: Optional[Dict[str, int]]
 
 
 @app.post("/temperature_score/", response_model=ResponseTemperatureScore, response_model_exclude_none=True)
@@ -78,7 +77,7 @@ def calculate_temperature_score(
     try:
         data_providers = SBTi.data.get_data_providers(config["data_providers"], data_providers)
         portfolio_data = SBTi.utils.get_data(data_providers, companies)
-        scores, aggregations, column_distribution = SBTi.utils.calculate(
+        scores, aggregations = SBTi.utils.calculate(
             portfolio_data=portfolio_data,
             fallback_score=default_score,
             time_frames=time_frames,
@@ -104,8 +103,7 @@ def calculate_temperature_score(
         aggregated_scores=aggregations,
         scores=scores.where(pd.notnull(scores), None).to_dict(orient="records"),
         coverage=coverage,
-        companies=scores[include_columns].replace({np.nan: None}).to_dict(orient="records"),
-        feature_distribution=column_distribution,
+        companies=scores[include_columns].replace({np.nan: None}).to_dict(orient="records")
     )
 
 
@@ -123,7 +121,7 @@ def get_data_providers() -> List[ResponseDataProvider]:
             for data_provider in config["data_providers"]]
 
 
-@app.post("/parse_portfolio/", response_model=List[Dict])
+@app.post("/parse_portfolio/", response_model=dict)
 def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
     """
     Parse a portfolio Excel file and return it as a list of dictionaries.
