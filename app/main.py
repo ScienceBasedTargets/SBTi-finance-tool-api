@@ -137,7 +137,7 @@ def parse_portfolio(file: bytes = File(...), skiprows: int = Form(...)):
 
 
 @app.post("/import_data_provider/")
-def import_data_provider(file: UploadFile = File(...)) -> HTTPValidationError:
+def import_data_provider(file: UploadFile = File(...)):
     """
     Import a new Excel data provider file. This will overwrite the current "dummy" data provider input file.
 
