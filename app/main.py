@@ -9,7 +9,7 @@ import uvicorn
 from SBTi.interfaces import PortfolioCompany, ScenarioInterface, EScope, ETimeFrames, ScoreAggregations
 from SBTi.portfolio_coverage_tvp import PortfolioCoverageTVP
 
-from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException
+from fastapi import FastAPI, File, Form, UploadFile, Body, HTTPException, Request
 from pydantic import BaseModel
 import mimetypes
 import SBTi
@@ -25,6 +25,16 @@ app = FastAPI(
 
 mimetypes.init()
 UPLOAD_FOLDER = 'data'
+
+
+@app.middleware("http")
+async def add_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "deny"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Pragma"] = "no-cache"
+    return response
 
 with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json')) as f_config:
     config = json.load(f_config)
