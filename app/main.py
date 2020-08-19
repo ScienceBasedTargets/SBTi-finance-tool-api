@@ -31,7 +31,7 @@ with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.json
 
 
 class ResponseTemperatureScore(BaseModel):
-    aggregated_scores: ScoreAggregations
+    aggregated_scores: Optional[ScoreAggregations]
     scores: List[dict]
     coverage: float
     companies: List[dict]
@@ -67,6 +67,9 @@ def calculate_temperature_score(
         anonymize_data_dump: Optional[bool] = Body(
             default=False,
             description="Whether or not the resulting data set should be anonymized or not."),
+        aggregate: Optional[bool] = Body(
+            default=True,
+            description="Whether to calculate aggregations or not."),
         scopes: Optional[List[EScope]] = Body(
             default=[],
             description="The scopes that should be included in the results."),
@@ -88,7 +91,8 @@ def calculate_temperature_score(
             aggregation_method=aggregation_method,
             grouping=grouping_columns,
             scenario=SBTi.temperature_score.Scenario.from_interface(scenario),
-            anonymize=anonymize_data_dump
+            anonymize=anonymize_data_dump,
+            aggregate=aggregate
         )
 
         coverage = PortfolioCoverageTVP().get_portfolio_coverage(portfolio_data, aggregation_method)
