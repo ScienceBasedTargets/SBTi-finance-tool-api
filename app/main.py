@@ -78,7 +78,7 @@ def calculate_temperature_score(
     Calculate the temperature score for a given set of parameters.
     """
     try:
-        data_providers = SBTi.data.get_data_providers(config["data_providers"], data_providers)
+        data_providers = SBTi.utils.get_data_providers(config["data_providers"], data_providers)
         portfolio_data = SBTi.utils.get_data(data_providers, companies)
         scores, aggregations = SBTi.utils.calculate(
             portfolio_data=portfolio_data,
