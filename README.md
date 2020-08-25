@@ -63,16 +63,20 @@ This will spin up two containers that work in conjunction with one another.
 
 To launch the latest release:
 ```bash
-docker-compose -f docker-compose-ui.yml up -d --build
+docker-compose -f docker-compose-ui.yml -d --build
 ``` 
 
 To use your local code-base:
 ```bash
-docker-compose -f docker-compose-ui-dev.yml up -d --build
+docker-compose -f docker-compose-ui-dev.yml -d --build
 ``` 
 
 The UI should now be available at [http://localhost:5000/](http://localhost:5000/) and check [http://localhost:5001/docs/](http://localhost:5001/docs/) for the API documentation
 
+To build an run the docker container locally use the following command:
+```bash
+docker-compose up -d --build
+```
 
 ## Deploy on Amazon Web Services
 These instructions assume that you've installed and configured the Amazon [AWS CLI tools](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) and the [ECS CLI tools](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ECS_CLI_Configuration.html) with an IAM account that has at least write access to ECS and EC2 and the capability of creating AIM roles.
