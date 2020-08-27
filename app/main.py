@@ -92,7 +92,6 @@ def calculate_temperature_score(
         )
 
         coverage = PortfolioCoverageTVP().get_portfolio_coverage(portfolio_data, aggregation_method)
-
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
