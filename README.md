@@ -11,7 +11,7 @@ Under the hood, this API uses the SBTi Python module. The complete structure tha
     |            docker.io/sbti/ui:latest             |
     |                                                 |
     | +-----------------------------------------+     |
-    | | REST API: Dockerized FasAPO/NGINX       |     |
+    | | REST API: Dockerized FastAPI/NGINX      |     |
     | | Source : github.com/OFBDABV/SBTi_api    |     |
     | | Install: via source or dockerhub        |     |
     | |          docker.io/sbti/sbti/api:latest |     |
