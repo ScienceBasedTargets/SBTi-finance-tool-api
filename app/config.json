@@ -8,43 +8,44 @@
       "type": "excel",
       "name": "Excel",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
+        "path": "data/input_format.xlsx"
       }
     },
     {
-      "type": "excel",
+      "type": "bloomberg",
       "name": "Bloomberg (Coming soon)",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
       }
     },
     {
-      "type": "excel",
+      "type": "cdp",
       "name": "CDP (Coming soon)",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
       }
     },
     {
-      "type": "excel",
+      "type": "iss",
       "name": "ISS (Coming soon)",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
       }
     },
     {
-      "type": "excel",
+      "type": "trucost",
       "name": "Trucost (Coming soon)",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
       }
     },
     {
-      "type": "excel",
+      "type": "urgentem",
       "name": "Urgentem (Coming soon)",
       "parameters": {
-        "path": "data/InputFormat.xlsx"
       }
     }
-  ]
+  ],
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5000,
+    "log_level": "info",
+    "reload": true
+  }
 }
