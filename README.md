@@ -63,12 +63,12 @@ This will spin up two containers that work in conjunction with one another.
 
 To launch the latest release:
 ```bash
-docker-compose -f docker-compose-ui.yml -d --build
+docker-compose -f docker-compose-ui.yml up -d --build
 ``` 
 
 To use your local code-base:
 ```bash
-docker-compose -f docker-compose-ui-dev.yml -d --build
+docker-compose -f docker-compose-ui-dev.yml up -d --build
 ``` 
 
 The UI should now be available at [http://localhost:5000/](http://localhost:5000/) and check [http://localhost:5001/docs/](http://localhost:5001/docs/) for the API documentation
