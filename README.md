@@ -1,3 +1,7 @@
+> Visit  http://getting-started.sbti-tool.org/ for the full documentation
+
+> If you have any additional questions or comments send a mail to: finance@sciencebasedtargets.org
+
 # SBTi Temperature Alignment tool API
 This package helps companies and financial institutions to assess the temperature alignment of current
 targets, commitments, and investment and lending portfolios, and to use this information to develop 
