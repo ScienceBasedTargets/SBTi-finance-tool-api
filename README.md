@@ -116,3 +116,17 @@ ecs-cli compose -f docker-compose_aws.yml up --cluster-config sbti-ecs-conf --fo
 12. You should now be able to access the API.
 
 > :warning: This will make the API publicly available on the world wide web! Please note that this API is not protected in any way. Therefore it's recommended to run your instance in a private subnet and only access it through there. Alternatively you can change the security group settings to only allow incoming connections from your local IP or company VPN.  
+
+## Development
+
+To set up the local dev environment with all dependencies, [install poetry](https://python-poetry.org/docs/#osx--linux--bashonwindows-install-instructions) and run
+
+```bash
+poetry install
+```
+
+This will create a virtual environment inside the project folder under `.venv`.
+
+### Updating Dependencies
+
+always run `poetry export -f requirements.txt --output requirements.txt --without-hashes` after updating a dependency to keep the `requirements.txt` file up to date as well.
