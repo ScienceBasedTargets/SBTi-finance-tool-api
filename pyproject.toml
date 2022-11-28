@@ -40,7 +40,7 @@ openpyxl = "3.0.9"
 fastapi = "0.70.0"
 uvicorn = "0.15.0"
 python-multipart = "0.0.5"
-sbti-finance-tool = "^1.0.4"
+sbti-finance-tool = "^1.0.5"
 
 [tool.poetry.dev-dependencies]
 black = "21.10b0"
